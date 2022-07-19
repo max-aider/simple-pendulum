@@ -2,129 +2,213 @@
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 
-#include <vector>
+#include <iostream>
+#include <iomanip>
 #include <math.h>
-#include <string>
-
-
-
-namespace Scene
-{
-	sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
-	float scale = 0;
-	bool isPaused = false;
-
-	sf::Vector2f position(desktop.width / 2, desktop.height / 10);
-
-	sf::Clock clock;
-	float lastTime = 0;
-
-	float getTime()
-	{
-		if (isPaused)
-		{
-			clock.restart();
-		}
-		else
-		{
-			lastTime = clock.getElapsedTime().asSeconds();
-		}
-
-		return lastTime;
-	}
-};
+#include <sstream>
+#include <string.h>
+#include <vector>
 
 
 
 class Pendulum
 {
+private:
+
+	float length = 1.0F;
+	float angle = 0.0F;
+	float acceleration = 0.0F;
+	float velocity = 0.0F;
+
 public:
-	Pendulum(float length, float angle) : length(length), angle(angle / 180 * 3.14), acceleration(0), velocity(0)
+
+	void setLength(float lengthInMeters)
 	{
-		Scene::scale = 1000 / length;
-
-		thread.setSize(sf::Vector2f(length * Scene::scale, 16));
-		thread.setFillColor(sf::Color(128, 128, 128));
-		thread.setOrigin(8, 8);
-		thread.setPosition(Scene::position);
-
-		ball.setRadius(64);
-		ball.setOrigin(ball.getRadius(), ball.getRadius());
+		length = lengthInMeters;
 	}
 
-	float getLength()
+	void setDegrees(float angleInDegrees)
+	{
+		angle = angleInDegrees / 180.0F * 3.14F;
+	}
+
+	void setRadians(float angleInRadians)
+	{
+		angle = angleInRadians;
+	}
+
+	float getLength() const
 	{
 		return length;
 	}
 
-	float getAcceleration()
+	float getDegrees() const
+	{
+		return angle / 3.14F * 180.0F;
+	}
+
+	float getRadians() const
+	{
+		return angle;
+	}
+
+	float getAcceleration() const
 	{
 		return acceleration;
 	}
 
-	float getVelocity()
+	float getLinearAcceleration() const
+	{
+		return acceleration * length;
+	}
+
+	float getVelocity() const
 	{
 		return velocity;
 	}
 
+	float getLinearVelocity() const
+	{
+		return velocity * length;
+	}
+
+	void tick(float deltaTime)
+	{
+		acceleration = 9.81F * std::cosf(angle) / length;
+		velocity += acceleration * deltaTime;
+		angle += velocity * deltaTime;
+	}
+};
+
+
+
+class Scene
+{
+private:
+
+	float scale;
+	float elapsedTime = 0.0F;
+	bool playing = true;
+
+	Pendulum& pendulum;
+
+	sf::Clock engineClock;
+	sf::Clock timerClock;
+
+	sf::Vector2f size;
+	sf::Vector2f position;
+
+	sf::RectangleShape thread;
+	sf::CircleShape ball;
+
+	sf::Font font;
+	sf::Text debugText;
+
+public:
+
+	Scene(const sf::RenderWindow& window, Pendulum& pendulum)
+		: size(window.getSize()),
+		pendulum(pendulum),
+		position(size / 2.0F)
+	{
+		scale = size.y / 2.25F;
+
+		thread.setSize(sf::Vector2f(scale, 16));
+		thread.setFillColor(sf::Color(128, 128, 128));
+		thread.setOrigin(8, 8);
+		thread.setPosition(position);
+
+		ball.setRadius(32);
+		ball.setOrigin(ball.getRadius(), ball.getRadius());
+
+		font.loadFromFile("Inconsolata.ttf");
+		debugText.setFont(font);
+		debugText.setCharacterSize(scale / 16);
+	}
+
+	bool isPlaying() const
+	{
+		return playing;
+	}
+
+	void setPlaying(bool isPlaying)
+	{
+		playing = isPlaying;
+	}
+
+	float getElapsedTime()
+	{
+		if (!playing)
+		{
+			timerClock.restart();
+		}
+		else
+		{
+			elapsedTime = timerClock.getElapsedTime().asSeconds();
+		}
+
+		return elapsedTime;
+	}
+
 	void tick()
 	{
-		if (Scene::isPaused)
+		if (!playing)
 		{
-			clock.restart();
+			engineClock.restart();
 			return;
 		}
 
-		acceleration = 9.81 * cosf(angle) / length;
+		pendulum.tick(engineClock.getElapsedTime().asSeconds());
 
-		velocity += acceleration * clock.getElapsedTime().asSeconds();
-
-		angle += velocity * clock.getElapsedTime().asSeconds();
-
-		thread.setRotation(angle * 180 / 3.14);
-		ball.setPosition(Scene::position.x + length * cosf(angle) * Scene::scale, Scene::position.y + length * sinf(angle) * Scene::scale);
-
-		clock.restart();
+		engineClock.restart();
 	}
 
 	void draw(sf::RenderWindow& window)
 	{
+		thread.setRotation(pendulum.getDegrees());
+		ball.setPosition(position.x + scale * std::cosf(pendulum.getRadians()), position.y + scale * std::sinf(pendulum.getRadians()));
+
+		std::stringstream ss;
+		ss << std::setprecision(2) << std::fixed << std::setw(15) << std::right
+			<< " Length: "
+			<< std::setw(5) << std::right
+			<< pendulum.getLength() << " m\n"
+			<< std::setw(15) << std::right
+			<< " Acceleration: "
+			<< std::setw(5) << std::right
+			<< pendulum.getLinearAcceleration() << " m/s^2 ("
+			<< std::setw(5) << std::right
+			<< pendulum.getAcceleration() << " rad/s^2)\n"
+			<< std::setw(15) << std::right
+			<< " Velocity: "
+			<< std::setw(5) << std::right
+			<< pendulum.getLinearVelocity() << " m/s   ("
+			<< std::setw(5) << std::right
+			<< pendulum.getVelocity() << " rad/s)\n"
+			<< std::setw(15) << std::right
+			<< " Elapsed: "
+			<< std::setw(5) << std::right
+			<< getElapsedTime() << " s";
+
+		debugText.setString(ss.str());
+
 		window.draw(thread);
 		window.draw(ball);
+		window.draw(debugText);
 	}
-
-private:
-	float length;
-	float angle;
-	float acceleration;
-	float velocity;
-
-	sf::RectangleShape thread;
-	sf::CircleShape ball;
-	sf::Clock clock;
 };
 
 
 
 int WinMain()
 {
-	Scene::desktop = sf::VideoMode::getDesktopMode();
-
-	sf::RenderWindow window(Scene::desktop, "Sandbox", sf::Style::Fullscreen);
+	sf::RenderWindow window(sf::VideoMode(1920, 1080), "Sandbox", sf::Style::Close);
 	window.setFramerateLimit(200);
 
 
 
-	Pendulum pendulum(1, 30);
-
-
-
-	sf::Font font;
-	font.loadFromFile("Inconsolata.ttf");
-
-	sf::Text text;
-	text.setFont(font);
-	text.setCharacterSize(48);
+	Pendulum pendulum;
+	Scene scene(window, pendulum);
 
 
 
@@ -146,24 +230,15 @@ int WinMain()
 				}
 				else if (event.key.code == sf::Keyboard::Space)
 				{
-					Scene::isPaused = !Scene::isPaused;
+					scene.setPlaying(!scene.isPlaying());
 				}
 			}
 		}
 
-
-
 		window.clear(sf::Color::Black);
 
-		pendulum.tick();
-		pendulum.draw(window);
-
-		window.draw(text);
-
-		text.setString(" Length: " + std::to_string(pendulum.getLength())
-			+ "\n Acceleration: " + std::to_string(pendulum.getAcceleration() * pendulum.getLength()) + " m/s^2 (" + std::to_string(pendulum.getAcceleration()) + " rad/s^2)"
-			+ "\n Velocity: " + std::to_string(pendulum.getVelocity() * pendulum.getLength()) + " m/s (" + std::to_string(pendulum.getVelocity()) + " rad/s)"
-			+ "\n Elapsed: " + std::to_string(Scene::getTime()) + " s");
+		scene.tick();
+		scene.draw(window);
 
 		window.display();
 	}
