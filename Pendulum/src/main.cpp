@@ -1,13 +1,10 @@
-#include <SFML/System.hpp>
-#include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 
-#include <iostream>
+#include <cmath>
 #include <iomanip>
-#include <math.h>
+#include <iostream>
 #include <sstream>
-#include <string.h>
-#include <vector>
+#include <string>
 
 
 
@@ -15,10 +12,10 @@ class Pendulum
 {
 private:
 
-	float length = 1.0F;
-	float angle = 0.0F;
-	float acceleration = 0.0F;
-	float velocity = 0.0F;
+	float length = 1.0f;
+	float angle = 0.0f;
+	float acceleration = 0.0f;
+	float velocity = 0.0f;
 
 public:
 
@@ -29,7 +26,7 @@ public:
 
 	void setDegrees(float angleInDegrees)
 	{
-		angle = angleInDegrees / 180.0F * 3.14F;
+		angle = angleInDegrees / 180.0f * 3.14f;
 	}
 
 	void setRadians(float angleInRadians)
@@ -44,7 +41,7 @@ public:
 
 	float getDegrees() const
 	{
-		return angle / 3.14F * 180.0F;
+		return angle / 3.14f * 180.0f;
 	}
 
 	float getRadians() const
@@ -74,7 +71,7 @@ public:
 
 	void tick(float deltaTime)
 	{
-		acceleration = 9.81F * std::cosf(angle) / length;
+		acceleration = 9.81f * std::cosf(angle) / length;
 		velocity += acceleration * deltaTime;
 		angle += velocity * deltaTime;
 	}
@@ -87,8 +84,8 @@ class Scene
 private:
 
 	float scale;
-	float elapsedTime = 0.0F;
-	bool playing = true;
+	float elapsedTime = 0.0f;
+	bool playing = false;
 
 	Pendulum& pendulum;
 
@@ -109,21 +106,21 @@ public:
 	Scene(const sf::RenderWindow& window, Pendulum& pendulum)
 		: size(window.getSize()),
 		pendulum(pendulum),
-		position(size / 2.0F)
+		position(size / 2.0f)
 	{
-		scale = size.y / 2.25F;
+		scale = size.y / 2.25f;
 
-		thread.setSize(sf::Vector2f(scale, 16));
-		thread.setFillColor(sf::Color(128, 128, 128));
-		thread.setOrigin(8, 8);
+		thread.setSize(sf::Vector2f(scale, 16.0f));
+		thread.setFillColor(sf::Color(127u, 127u, 127u));
+		thread.setOrigin(8.0f, 8.0f);
 		thread.setPosition(position);
 
-		ball.setRadius(32);
+		ball.setRadius(32.0f);
 		ball.setOrigin(ball.getRadius(), ball.getRadius());
 
 		font.loadFromFile("Inconsolata.ttf");
 		debugText.setFont(font);
-		debugText.setCharacterSize(scale / 16);
+		debugText.setCharacterSize(scale / 16.0f);
 	}
 
 	bool isPlaying() const
@@ -202,7 +199,7 @@ public:
 
 int WinMain()
 {
-	sf::RenderWindow window(sf::VideoMode(1920, 1080), "Sandbox", sf::Style::Close);
+	sf::RenderWindow window(sf::VideoMode(1920, 1080), "Pendulum", sf::Style::None);
 	window.setFramerateLimit(200);
 
 
@@ -232,6 +229,10 @@ int WinMain()
 				{
 					scene.setPlaying(!scene.isPlaying());
 				}
+			}
+			else if (event.type == sf::Event::LostFocus)
+			{
+				scene.setPlaying(false);
 			}
 		}
 
