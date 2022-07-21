@@ -1,6 +1,7 @@
 #include <SFML/Graphics.hpp>
 
 #include <cmath>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -13,15 +14,24 @@ class Pendulum
 private:
 
 	float length = 1.0f;
+	float mass = 1.0f;
+	float radius = 0.0f;
 	float angle = 0.0f;
 	float acceleration = 0.0f;
 	float velocity = 0.0f;
+
+	std::function<float()> resistanceForce = []() { return 0.0f; };
 
 public:
 
 	void setLength(float lengthInMeters)
 	{
 		length = lengthInMeters;
+	}
+
+	void setMass(float massInKg)
+	{
+		mass = massInKg;
 	}
 
 	void setDegrees(float angleInDegrees)
@@ -34,9 +44,29 @@ public:
 		angle = angleInRadians;
 	}
 
+	void setRadius(float radiusInMeters)
+	{
+		radius = radiusInMeters;
+	}
+
+	void setResistanceForce(std::function<float()> resistanceForceFunction)
+	{
+		resistanceForce = resistanceForceFunction;
+	}
+
 	float getLength() const
 	{
 		return length;
+	}
+
+	float getMass() const
+	{
+		return mass;
+	}
+
+	float getRadius()
+	{
+		return radius;
 	}
 
 	float getDegrees() const
@@ -69,9 +99,14 @@ public:
 		return velocity * length;
 	}
 
+	float getResistanceForce()
+	{
+		return resistanceForce();
+	}
+
 	void tick(float deltaTime)
 	{
-		acceleration = 9.81f * std::cosf(angle) / length;
+		acceleration = (9.81f * std::cosf(angle) - resistanceForce() / mass) / length;
 		velocity += acceleration * deltaTime;
 		angle += velocity * deltaTime;
 	}
@@ -166,24 +201,44 @@ public:
 		ball.setPosition(position.x + scale * std::cosf(pendulum.getRadians()), position.y + scale * std::sinf(pendulum.getRadians()));
 
 		std::stringstream ss;
-		ss << std::setprecision(2) << std::fixed << std::setw(15) << std::right
-			<< " Length: "
+		ss << std::setprecision(2) << std::fixed
+			
+			<< std::setw(15) << std::right
+			<< "Length: "
 			<< std::setw(5) << std::right
 			<< pendulum.getLength() << " m\n"
+
 			<< std::setw(15) << std::right
-			<< " Acceleration: "
+			<< "Mass: "
+			<< std::setw(5) << std::right
+			<< pendulum.getMass() << " kg\n"
+
+			<< std::setw(15) << std::right
+			<< "Radius: "
+			<< std::setw(5) << std::right
+			<< pendulum.getRadius() << " m\n"
+
+			<< std::setw(15) << std::right
+			<< "Acceleration: "
 			<< std::setw(5) << std::right
 			<< pendulum.getLinearAcceleration() << " m/s^2 ("
 			<< std::setw(5) << std::right
 			<< pendulum.getAcceleration() << " rad/s^2)\n"
+
 			<< std::setw(15) << std::right
-			<< " Velocity: "
+			<< "Velocity: "
 			<< std::setw(5) << std::right
 			<< pendulum.getLinearVelocity() << " m/s   ("
 			<< std::setw(5) << std::right
 			<< pendulum.getVelocity() << " rad/s)\n"
+
 			<< std::setw(15) << std::right
-			<< " Elapsed: "
+			<< " Resistance: "
+			<< std::setw(5) << std::right
+			<< pendulum.getResistanceForce() << " kg*m/s^2\n"
+
+			<< std::setw(15) << std::right
+			<< "Elapsed: "
 			<< std::setw(5) << std::right
 			<< getElapsedTime() << " s";
 
