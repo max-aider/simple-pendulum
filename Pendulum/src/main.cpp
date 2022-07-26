@@ -186,13 +186,13 @@ public:
 	{
 		if (!playing)
 		{
-			engineClock.restart();
+			//engineClock.restart();
 			return;
 		}
 
-		pendulum.tick(engineClock.getElapsedTime().asSeconds());
+		pendulum.tick(0.01f);
 
-		engineClock.restart();
+		//engineClock.restart();
 	}
 
 	void draw(sf::RenderWindow& window)
@@ -255,7 +255,7 @@ public:
 int WinMain()
 {
 	sf::RenderWindow window(sf::VideoMode(1920, 1080), "Pendulum", sf::Style::None);
-	window.setFramerateLimit(200);
+	window.setFramerateLimit(100);
 
 
 
